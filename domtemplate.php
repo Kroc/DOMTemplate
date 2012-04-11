@@ -177,7 +177,7 @@ class DOMTemplateNode {
 		return $this->DOMXPath->query (implode ('|',
 			//convert each query to real XPath:
 			//(multiple targets are available by comma separating queries)
-			array_map (array (self, 'shorthand2xpath'), explode (', ', $query))
+			array_map (array ('self', 'shorthand2xpath'), explode (', ', $query))
 		), $this->DOMNode);
 	}
 	
