@@ -2,7 +2,7 @@
 
 //DOM Templating classes v9 © copyright (cc-by) Kroc Camen 2012
 //you may do whatever you want with this code as long as you give credit
-//documentation at http://camendesign.com/dom_templating
+//documentation at <camendesign.com/dom_templating>
 
 class DOMTemplate extends DOMTemplateNode {
 	private $DOMDocument;
