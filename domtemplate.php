@@ -1,12 +1,12 @@
 <?php
 
-//DOM Templating classes v10 © copyright (cc-by) Kroc Camen 2012
+//DOM Templating classes v11 © copyright (cc-by) Kroc Camen 2012
 //you may do whatever you want with this code as long as you give credit
 //documentation at <camendesign.com/dom_templating>
 
 /*	Basic API:
 	
-	new DOMTemplate (filepath, [namespace, namespace_URI])
+	new DOMTemplate (xml, [namespace, namespace_URI])
 	
 		query (query)				make an XPath query
 		set (queries, [asHTML])			change HTML by specifying an array of ('XPath' => 'value')
@@ -16,28 +16,28 @@
 		html ()					get the current HTML code
 		repeat (query)				return one (or more) elements as sub-templates
 			
-			next ()				append the sub-template to the list and reset it’s content
+			next ()				append the sub-template to the list and reset its content
 */
 
 class DOMTemplate extends DOMTemplateNode {
 	private $DOMDocument;
 	private $keep_prolog = false;
 	
-	public function __construct ($filepath, $NS='', $NS_URI='') {
-		//get just the template text to begin with
-		$xml = file_get_contents ($filepath);
-		//does this file have an XML prolog? if so, we’ll keep it as-is in the output
+	public function __construct ($xml, $NS='', $NS_URI='') {
+		//does this source have an XML prolog? if so, we’ll keep it as-is in the output
 		if (substr_compare ($xml, '<?xml', 0, 4, true) === 0) $this->keep_prolog = true;
 		
-		//load the template file to work with. this must be valid XML (but not XHTML)
+		//load the template file to work with:
+		//* this must be valid XML (but not XHTML)
+		//* must have only one root (wrapping) element; e.g. `<html>`
 		$this->DOMDocument = new DOMDocument ();
-		$this->DOMDocument->loadXML (
+		if (!$this->DOMDocument->loadXML (
 			//if the document doesn't already have an XML prolog, add one to avoid mangling unicode characters
 			//see <php.net/manual/en/domdocument.loadxml.php#94291>
 			(!$this->keep_prolog ? "<?xml version=\"1.0\" encoding=\"utf-8\"?>" : '').
 			//replace HTML entities (e.g. "&copy;") with real unicode characters to prevent invalid XML
 			self::html_entity_decode ($xml), @LIBXML_COMPACT | @LIBXML_NONET
-		) or trigger_error (
+		)) trigger_error (
 			"Template '$filepath' is invalid XML", E_USER_ERROR
 		);
 		//set the root node for all xpath searching
