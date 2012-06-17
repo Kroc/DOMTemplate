@@ -6,7 +6,7 @@
 
 /*	Basic API:
 	
-	new DOMTemplate (xml, [namespace, namespace_URI])
+	new DOMTemplate (xml, [namespace])
 
 	query (query)				make an XPath query
 	set (queries, [asHTML])			change HTML by specifying an array of ('XPath' => 'value')
@@ -205,9 +205,7 @@ abstract class DOMTemplateNode {
 		//the painful bit: if you have an XMLNS in your template then XPath won’t work unless you:
 		// a. register a default namespace, and
 		// b. prefix element names in your XPath queries with this namespace
-		if (sizeof ($namespaces) > 0) foreach ($namespaces as $NS => $NS_URI) {
-			$this->DOMXPath->registerNamespace ($NS, $NS_URI);
-		}
+		if (!empty ($namespaces)) foreach ($namespaces as $NS=>$URI) $this->DOMXPath->registerNamespace ($NS, $URI);
 	}
 	
 	/* query : find node(s)
