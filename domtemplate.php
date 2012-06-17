@@ -205,7 +205,7 @@ abstract class DOMTemplateNode {
 		//the painful bit: if you have an XMLNS in your template then XPath won’t work unless you:
 		// a. register a default namespace, and
 		// b. prefix element names in your XPath queries with this namespace
-		if (sizeof ($this->namespaces) > 0) foreach ($namespaces as $NS => $NS_URI) {
+		if (sizeof ($namespaces) > 0) foreach ($namespaces as $NS => $NS_URI) {
 			$this->DOMXPath->registerNamespace ($NS, $NS_URI);
 		}
 	}
