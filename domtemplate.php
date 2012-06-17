@@ -197,7 +197,7 @@ abstract class DOMTemplateNode {
 	   -------------------------------------------------------------------------------------------------------------- */
 	//you cannot instantiate this class yourself, _always_ work through DOMTemplate! why? because you cannot mix nodes
 	//from different documents! DOMTemplateNodes _must_ come from DOMDocument kept privately inside DOMTemplate
-	public function __construct ($DOMNode, $namespaces) {
+	public function __construct ($DOMNode, $namespaces=array ()) {
 		//use a DOMNode as a base point for all the XPath queries and whatnot
 		//(in DOMTemplate this will be the whole template, in DOMTemplateRepeater, it will be the chosen element)
 		$this->DOMNode  = $DOMNode;
