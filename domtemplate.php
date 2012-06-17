@@ -1,12 +1,12 @@
 <?php
 
-//DOM Templating classes v12 © copyright (cc-by) Kroc Camen 2012
+//DOM Templating classes v13 © copyright (cc-by) Kroc Camen 2012
 //you may do whatever you want with this code as long as you give credit
 //documentation at <camendesign.com/dom_templating>
 
 /*	Basic API:
 	
-	new DOMTemplate (xml, [namespace])
+	new DOMTemplate (xml, [namespaces])
 
 	query (query)				make an XPath query
 	set (queries, [asHTML])			change HTML by specifying an array of ('XPath' => 'value')
@@ -29,7 +29,8 @@ class DOMTemplate extends DOMTemplateNode {
 	   -------------------------------------------------------------------------------------------------------------- */
 	public function __construct (
 		$xml,				//a string of the XML to form the template
-		$namespaces=array ()		//an array of XML namespaces if your document uses them
+		$namespaces=array ()		//an array of XML namespaces if your document uses them,
+						//in the format of `'namespace' => 'namespace URI'`
 	) {
 		//does this source have an XML prolog? if so, we’ll keep it as-is in the output
 		if (substr_compare ($xml, '<?xml', 0, 4, true) === 0) $this->keep_prolog = true;
@@ -206,6 +207,7 @@ abstract class DOMTemplateNode {
 		// a. register a default namespace, and
 		// b. prefix element names in your XPath queries with this namespace
 		if (!empty ($namespaces)) foreach ($namespaces as $NS=>$URI) $this->DOMXPath->registerNamespace ($NS, $URI);
+		$this->namespaces = $namespaces;
 	}
 	
 	/* query : find node(s)
@@ -356,7 +358,7 @@ abstract class DOMTemplateNode {
 	public function repeat ($query) {
 		//NOTE: the provided XPath query could return more than one element! DOMTemplateRepeaterArray therefore
 		//	acts as a simple wrapper to propogate changes to all the matched nodes (DOMTemplateRepeater)
-		return new DOMTemplateRepeaterArray ($this->query ($query), $namespaces);
+		return new DOMTemplateRepeaterArray ($this->query ($query), $this->namespaces);
 	}
 }
 
