@@ -255,6 +255,7 @@ abstract class DOMTemplateNode {
 				
 			//if the text is to be inserted as HTML that will be included into the output
 			case $asHTML:
+				if ($value == '') break;
 				$frag = $node->ownerDocument->createDocumentFragment ();
 				//if the HTML string is not valid XML, it won’t work!
 				$frag->appendXML (self::html_entity_decode ($value));
