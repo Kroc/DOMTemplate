@@ -352,13 +352,14 @@ abstract class DOMTemplateNode {
 	public function html () {
 		//fix and clean DOM's XML output:
 		return preg_replace (
-			//add space to self-closing	//fix broken self-closed tags
-			array ('/<([^<]*[^ ])\/>/s',	'/<(div|[ou]l|textarea|script)([^>]*) ?\/>/'),
-			array ('<$1 />',		'<$1$2></$1>'),
+			// merge expanded tags
+			'/><\/(?:area|base|br|col|command|embed|hr|img|input|link|meta|param|source)>/',
+			' />',
 			$this->DOMNode->ownerDocument->saveXML (
 				//if you’re calling this function from the template-root,
 				//don’t specify a node otherwise the DOCTYPE won’t be included
-				get_class ($this) == 'DOMTemplate'  ? NULL : $this->DOMNode
+				get_class ($this) == 'DOMTemplate' ? NULL : $this->DOMNode,
+				LIBXML_NOEMPTYTAG
 			)
 		);
 	}
