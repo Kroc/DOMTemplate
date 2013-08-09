@@ -334,7 +334,7 @@ abstract class DOMTemplateNode {
 	private function setClassNode ($DOMNode, $class) {
 		//check if the class node already has the className (don't add twice)
 		if (!in_array ($class, explode (' ', $DOMNode->nodeValue)))
-			@$node->nodeValue = $DOMNode->nodeValue." $class"
+			@$DOMNode->nodeValue = $DOMNode->nodeValue." $class"
 		;
 	}
 	
