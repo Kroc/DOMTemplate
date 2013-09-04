@@ -1,6 +1,6 @@
 <?php
 
-//DOM Templating classes v17 © copyright (cc-by) Kroc Camen 2012
+//DOM Templating classes v18 © copyright (cc-by) Kroc Camen 2013
 //you may do whatever you want with this code as long as you give credit
 //documentation at <camendesign.com/dom_templating>
 
@@ -388,7 +388,7 @@ abstract class DOMTemplateNode {
 		);
 		
 		//XML is already used for the internal representation; if outputting XML no filtering is needed
-		if ($this->type == $this::XML) return $source;
+		if ($this->type == $this->XML) return $source;
 		
 		//fix and clean DOM's XML into HTML:
 		//----------------------------------
