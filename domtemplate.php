@@ -171,7 +171,7 @@ abstract class DOMTemplateNode {
 		
 		//[2] properly self-close some elments
 		$text = preg_replace (
-			'/<(base|basefont|br|col|img|input|link|meta|param|source|track)([^>]*)(?<!\/)>(?!<\/$1>)/is',
+			'/<(area|base|basefont|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)([^>]*)(?<!\/)>(?!<\/$1>)/is',
 			'<$1$2 />', $text
 		);
 		
