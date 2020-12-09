@@ -27,6 +27,9 @@
 			append the sub-template to the list and reset its content
 */
 
+// PHP 7+ required:
+declare(strict_types=1);
+
 // class DOMTemplate : the overall template controller
 //==============================================================================
 class DOMTemplate extends DOMTemplateNode {
@@ -35,8 +38,8 @@ class DOMTemplate extends DOMTemplateNode {
 
 	// what type of data are we processing?
 	protected $type = self::HTML;
-	const HTML = 0;
-	const XML  = 1;
+	public const HTML = 0;
+	public const XML  = 1;
 
 	// a table of HTML entites to reverse:
 	// '&', '<', '>' are removed so we don’t turn user text into working HTML!
@@ -49,9 +52,11 @@ class DOMTemplate extends DOMTemplateNode {
 	// new DOMTemplate : instantiation
 	//--------------------------------------------------------------------------
 	public function __construct (
-		$source,		//a string of the HTML or XML to form the template
-		$namespaces=[]	//an array of XML namespaces if your document uses them,
-						//in the format of `'namespace' => 'namespace URI'`
+		// a string of the HTML or XML to form the template
+		string $source,
+		// an array of XML namespaces if your document uses them,
+		// in the format of `'namespace' => 'namespace URI'`
+		array  $namespaces=[]
 	) {
 		// construct the HTML entities table:
 		// this function was added in PHP 5.3.4, but the extended HTML5
@@ -85,8 +90,8 @@ class DOMTemplate extends DOMTemplateNode {
 			? "<?xml version=\"1.0\" encoding=\"utf-8\"?>".self::toXML ($source)
 			: $source,
 			// <https://www.php.net/manual/en/libxml.constants.php>
-			@LIBXML_COMPACT ||	// libxml >= 2.6.21
-			@LIBXML_NONET		// do not connect to external resources
+			LIBXML_COMPACT |	// libxml >= 2.6.21
+			LIBXML_NONET		// do not connect to external resources
 		)) trigger_error (
 			"Source is invalid XML", E_USER_ERROR
 		);
@@ -97,7 +102,7 @@ class DOMTemplate extends DOMTemplateNode {
 
 	// output the document (cast the object to a string, i.e. `echo $template;`)
 	//--------------------------------------------------------------------------
-	public function __toString () {
+	public function __toString (): string {
 		// if the input was HTML, remove the XML prolog on output
 		return $this->type == self::HTML
 		?	// we defer to DOMTemplateNode which returns the HTML for any node,
@@ -122,7 +127,7 @@ abstract class DOMTemplateNode {
 
 	// html_entity_decode : convert HTML entities back to UTF-8
 	//--------------------------------------------------------------------------
-	public function html_entity_decode ($html) {
+	public function html_entity_decode (string $html): string {
 		// because everything is XML, HTML named entities like "&copy;" will
 		// cause blank output. we need to convert these named entities back
 		// to real UTF-8 characters (which XML doesn’t mind)
@@ -137,7 +142,7 @@ abstract class DOMTemplateNode {
 	//--------------------------------------------------------------------------
 	// TODO: even though this isn't static, we seem to be able to call it
 	//		 statically!?
-	public function toXML ($text) {
+	public function toXML (string $text): string {
 		// [1] because everything is XML, HTML named entities like "&copy;"
 		// will cause blank output. we need to convert these named entities
 		// back to real UTF-8 characters (which XML doesn’t mind)
@@ -189,12 +194,12 @@ abstract class DOMTemplateNode {
 	//
 	public static function shorthand2xpath (
 		// a string to convert
-		$query,
+		string $query,
 		// by default, the converted XPath uses a relative prefix
 		// -- "//" -- to work around a bug in XPath matching.
 		// see <php.net/manual/en/domxpath.query.php#99760> for details
-		$use_relative=true
-	) {
+		bool $use_relative = true
+	) :	string {
 		// return from cache where possible
 		// (this doubles the speed of repeat loops)
 		static $cache = [];
@@ -231,7 +236,10 @@ abstract class DOMTemplateNode {
 	// DOMTemplateNodes _must_ come from DOMDocument kept privately inside
 	// DOMTemplate
 	//
-	public function __construct ($DOMNode, $namespaces=[]) {
+	public function __construct (
+		DOMNode $DOMNode,
+		array 	$namespaces=[]
+	) {
 		// use a DOMNode as a base point for all the XPath queries
 		// and whatnot (in DOMTemplate this will be the whole template,
 		// in DOMTemplateRepeater, it will be the chosen element)
@@ -255,10 +263,13 @@ abstract class DOMTemplateNode {
 	// DOMNodeList and therefore can't create APIs that affect all the nodes
 	// returned by an XPath query
 	//
+	// TODO: we could use the "decorator" pattern, given as a response
+	// 		 to me here: <https://bugs.php.net/bug.php?id=48352>
+	//
 	public function query (
 		// an XPath/shorthand (see `shorthand2xpath`) to search for nodes
-		$query
-	) {
+		string $query
+	) : DOMNodeList {
 		// convert each query to real XPath: (multiple targets
 		// are available by comma separating queries)
 		$xpath = implode ('|', array_map (
@@ -277,11 +288,11 @@ abstract class DOMTemplateNode {
 	//--------------------------------------------------------------------------
 	public function set (
 		// an array of `'xpath' => 'text'` to find and set
-		$queries,
+		string $queries,
 		// text is by-default encoded for safety against HTML injection,
 		// if this parameter is true then the text is added as real HTML
-		$asHTML=false
-	) {
+		bool $asHTML = false
+	) : this {
 		foreach ($queries as $query => $value)
 			$this->setValue ($query, $value, $asHTML)
 		;
@@ -292,12 +303,12 @@ abstract class DOMTemplateNode {
 	//--------------------------------------------------------------------------
 	public function setValue (
 		// an XPath/shorthand (see `shorthand2xpath`) to search for nodes
-		$query,
+		string $query,
 		// what text to replace the node's contents with
-		$value,
+		string $value,
 		// if the text should be safety encoded or inserted as HTML
-		$asHTML=false
-	) {
+		bool $asHTML = false
+	) : this {
 		foreach ($this->query ($query) as $node) switch (true) {
 
 			// if the selected node is a "class" attribute,
@@ -343,7 +354,10 @@ abstract class DOMTemplateNode {
 	// addClass : add a className to an element,
 	// appending it to existing classes if they exist
 	//--------------------------------------------------------------------------
-	public function addClass ($query, $new_class) {
+	public function addClass (
+		string $query,
+		string $new_class
+	) : this {
 		// first determine if there is a 'class' attribute already?
 		foreach ($this->query ($query) as $node) if (
 			$node->hasAttributes () && $class = $node->getAttribute ('class')
@@ -361,13 +375,16 @@ abstract class DOMTemplateNode {
 
 	// add a className to an existing class attribute
 	// (this is shared between `setValue` & `addClass`)
-	private function setClassNode ($DOMNode, $class) {
+	private function setClassNode (
+		DOMNode $DOMNode,
+		string	$class
+	) : void {
 		// check if the class node already has the className (don't add twice)
 		if (!in_array ($class, explode (' ', $DOMNode->nodeValue)))
 			@$DOMNode->nodeValue = $DOMNode->nodeValue." $class"
 		;
 	}
-	
+
 	// remove : remove all the elements / attributes that match an xpath query
 	//--------------------------------------------------------------------------
 	public function remove (
@@ -388,8 +405,8 @@ abstract class DOMTemplateNode {
 		//
 		//    $DOMTemplate->remove ('a@class' => 'undesired');
 		//
-		$query
-	) {
+		string $query
+	) :	this {
 		// if a string is provided, cast it into an array for assumption below
 		if (is_string ($query)) $query = [$query => true];
 		// loop the array, test the logic, and select the node(s)...
@@ -421,7 +438,7 @@ abstract class DOMTemplateNode {
 
 	// output the source code (cast the object to a string)
 	//--------------------------------------------------------------------------
-	public function __toString () {
+	public function __toString (): string {
 		// get the document's code, we'll process it
 		// differently depending on desired output format
 		$source = $this->DOMNode->ownerDocument->saveXML (
@@ -474,7 +491,10 @@ abstract class DOMTemplateNode {
 		$item = $DOMTemplate->repeat ('.list-item');
 		foreach ($data as $value) $item->setValue ('.', $value)->next ();
 	*/
-	public function repeat ($query) {
+	public function repeat (
+		string $query
+	) : DOMTemplateRepeaterArray
+	{
 		// NOTE: the provided XPath query could return more than one element!
 		// `DOMTemplateRepeaterArray` therefore acts as a simple wrapper to
 		// propogate changes to all the matched nodes (`DOMTemplateRepeater`)
@@ -493,7 +513,10 @@ abstract class DOMTemplateNode {
 class DOMTemplateRepeaterArray {
 	private $nodes;
 
-	public function __construct ($DOMNodeList, $namespaces=[]) {
+	public function __construct (
+		DOMNodeList $DOMNodeList,
+		array		$namespaces=[]
+	) {
 		// convert the XPath query result into extended `DOMTemplateNode`s
 		// (`DOMTemplateRepeater`) so that you can modify the HTML with
 		// the same usual DOMTemplate API
@@ -502,7 +525,7 @@ class DOMTemplateRepeaterArray {
 		;
 	}
 
-	public function next () {
+	public function next (): this {
 		// cannot use `foreach` here because you shouldn't
 		// modify the nodes whilst iterating them
 		for ($i=0; $i<count ($this->nodes); $i++) $this->nodes[$i]->next ();
@@ -510,13 +533,20 @@ class DOMTemplateRepeaterArray {
 	}
 
 	// refer to `DOMTemplateNode->set`
-	public function set ($queries, $asHTML=false) {
+	public function set (
+		string  $queries,
+		bool	$asHTML = false
+	) : this {
 		foreach ($this->nodes as $node) $node->set ($queries, $asHTML);
 		return $this;
 	}
 
 	// refer to `DOMTemplateNode->setValue`
-	public function setValue ($query, $value, $asHTML=false) {
+	public function setValue (
+		string	$query,
+		string	$value,
+		bool	$asHTML = false
+	) : this {
 		foreach ($this->nodes as $node)
 			$node->setValue ($query, $value, $asHTML)
 		;
@@ -524,13 +554,18 @@ class DOMTemplateRepeaterArray {
 	}
 
 	// refer to `DOMTemplateNode->addClass`
-	public function addClass ($query, $new_class) {
+	public function addClass (
+		string $query,
+		string $new_class
+	) : this {
 		foreach ($this->nodes as $node) $node->addClass ($query, $new_class);
 		return $this;
 	}
 
 	// refer to `DOMTemplateNode->remove`
-	public function remove ($query) {
+	public function remove (
+		string $query
+	) : this {
 		foreach ($this->nodes as $node) $node->remove ($query);
 		return $this;
 	}
@@ -544,7 +579,10 @@ class DOMTemplateRepeater extends DOMTemplateNode {
 
 	protected $type;
 
-	public function __construct ($DOMNode, $namespaces=[]) {
+	public function __construct (
+		DOMNode	$DOMNode,
+		array	$namespaces=[]
+	) {
 		// we insert the templated item after the reference node,
 		// which will always be the last item that was templated
 		$this->refNode  = $DOMNode;
@@ -555,7 +593,7 @@ class DOMTemplateRepeater extends DOMTemplateNode {
 		parent::__construct ($DOMNode, $namespaces);
 	}
 
-	public function next () {
+	public function next (): this {
 		// when we insert the newly templated item,
 		// use it as the reference node for the next item and so on
 		$this->refNode =
