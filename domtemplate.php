@@ -19,6 +19,8 @@
 			change a single HTML value with an XPath query
 	addClass (query, new_class)
 			add a class to an HTML element
+	append (query, content)
+			append content to the end of the *inside* an element
 	remove (query)
 			remove one or more HTML elements, attributes or classes
 	repeat (query)
@@ -125,6 +127,18 @@ abstract class DOMTemplateNode {
 
 	protected $namespaces;	// optional XML namespaces
 
+	// create_fragment : given plain-text, turn it into a small DOM tree
+	//--------------------------------------------------------------------------
+	private function create_fragment (string $text) : DOMDocumentFragment {
+		$frag = $this->DOMNode->ownerDocument->createDocumentFragment ();
+		$frag->appendXML (
+			// if the source document is HTML, filter it
+			$this->type == DOMTemplate::HTML
+			? self::toXML ($text) : $text
+		);
+		return $frag;
+	}
+
 	// html_entity_decode : convert HTML entities back to UTF-8
 	//--------------------------------------------------------------------------
 	public function html_entity_decode (string $html): string {
@@ -138,7 +152,7 @@ abstract class DOMTemplateNode {
 		);
 	}
 
-	// toXML : convert string input to safe XML for inporting into DOM
+	// toXML : convert string input to safe XML for importing into DOM
 	//--------------------------------------------------------------------------
 	// TODO: even though this isn't static, we seem to be able to call it
 	//		 statically!?
@@ -283,7 +297,7 @@ abstract class DOMTemplateNode {
 			throw new Exception ("Invalid XPath Expression: $xpath");
 		}
 	}
-	
+
 	// set : change multiple nodes in a simple fashion
 	//--------------------------------------------------------------------------
 	public function set (
@@ -292,13 +306,13 @@ abstract class DOMTemplateNode {
 		// text is by-default encoded for safety against HTML injection,
 		// if this parameter is true then the text is added as real HTML
 		bool $asHTML = false
-	) : this {
+	) {
 		foreach ($queries as $query => $value)
 			$this->setValue ($query, $value, $asHTML)
 		;
 		return $this;
 	}
-	
+
 	// setValue : set the text on the results of a single xpath query
 	//--------------------------------------------------------------------------
 	public function setValue (
@@ -308,7 +322,7 @@ abstract class DOMTemplateNode {
 		string $value,
 		// if the text should be safety encoded or inserted as HTML
 		bool $asHTML = false
-	) : this {
+	) {
 		foreach ($this->query ($query) as $node) switch (true) {
 
 			// if the selected node is a "class" attribute,
@@ -333,15 +347,10 @@ abstract class DOMTemplateNode {
 				// you can't append a blank!
 				if (!$value) break;
 
-				// attach the HTML to the node
-				$frag = $node->ownerDocument->createDocumentFragment ();
-				if (!@$frag->appendXML (
-						// if the source document is HTML, filter it
-						$this->type == DOMTemplate::HTML
-						? self::toXML ($value) : $value
-				) ||
-					!@$node->appendChild ($frag)
-				) throw new Exception ("Invalid HTML");
+				// attach the HTML/XML fragment to the node
+				$node->appendChild (
+					$this->create_fragment($value)
+				);
 				break;
 
 			// otherwise, encode the text to display as-is
@@ -357,7 +366,7 @@ abstract class DOMTemplateNode {
 	public function addClass (
 		string $query,
 		string $new_class
-	) : this {
+	) {
 		// first determine if there is a 'class' attribute already?
 		foreach ($this->query ($query) as $node) if (
 			$node->hasAttributes () && $class = $node->getAttribute ('class')
@@ -385,6 +394,21 @@ abstract class DOMTemplateNode {
 		;
 	}
 
+	// append: append content to the end of the *inside* an element
+	//--------------------------------------------------------------------------
+	public function append(
+		string $query,			// node query to select element(s)
+		string $content 		// content to append
+	) {
+		// conver the plain-text to an 
+		$frag = $this->create_fragment( $content );
+		// execute query, loop returned node(s) and
+		// attach the HTML/XML fragment to the node
+		foreach ($this->query ($query) as $node) $node->appendChild ($frag);
+		// chain...
+		return $this;
+	}
+
 	// remove : remove all the elements / attributes that match an xpath query
 	//--------------------------------------------------------------------------
 	public function remove (
@@ -405,8 +429,8 @@ abstract class DOMTemplateNode {
 		//
 		//    $DOMTemplate->remove ('a@class' => 'undesired');
 		//
-		string $query
-	) :	this {
+		$query		// TODO: use union type or extra methods for string|array
+	) {
 		// if a string is provided, cast it into an array for assumption below
 		if (is_string ($query)) $query = [$query => true];
 		// loop the array, test the logic, and select the node(s)...
@@ -525,7 +549,7 @@ class DOMTemplateRepeaterArray {
 		;
 	}
 
-	public function next (): this {
+	public function next () {
 		// cannot use `foreach` here because you shouldn't
 		// modify the nodes whilst iterating them
 		for ($i=0; $i<count ($this->nodes); $i++) $this->nodes[$i]->next ();
@@ -536,7 +560,7 @@ class DOMTemplateRepeaterArray {
 	public function set (
 		string  $queries,
 		bool	$asHTML = false
-	) : this {
+	) {
 		foreach ($this->nodes as $node) $node->set ($queries, $asHTML);
 		return $this;
 	}
@@ -546,7 +570,7 @@ class DOMTemplateRepeaterArray {
 		string	$query,
 		string	$value,
 		bool	$asHTML = false
-	) : this {
+	) {
 		foreach ($this->nodes as $node)
 			$node->setValue ($query, $value, $asHTML)
 		;
@@ -557,7 +581,7 @@ class DOMTemplateRepeaterArray {
 	public function addClass (
 		string $query,
 		string $new_class
-	) : this {
+	) {
 		foreach ($this->nodes as $node) $node->addClass ($query, $new_class);
 		return $this;
 	}
@@ -565,7 +589,7 @@ class DOMTemplateRepeaterArray {
 	// refer to `DOMTemplateNode->remove`
 	public function remove (
 		string $query
-	) : this {
+	) {
 		foreach ($this->nodes as $node) $node->remove ($query);
 		return $this;
 	}
