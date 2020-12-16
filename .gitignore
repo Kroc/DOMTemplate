@@ -1,5 +1,5 @@
 *
 !.gitignore
-
+!composer.json
 !domtemplate.php
 !LICENCE.txt
