@@ -146,7 +146,7 @@ abstract class DOMTemplateNode {
 		// [2] properly self-close some elments
 		$text = preg_replace (
 			'/<(area|base|basefont|br|col|embed|hr|img|input|keygen|link|'.
-			'menuitem|meta|param|source|track|wbr)([^>]*)(?<!\/)>(?!<\/$1>)/is',
+			'menuitem|meta|param|source|track|wbr)\b([^>]*)(?<!\/)>(?!<\/$1>)/is',
 			'<$1$2 />', $text
 		);
 		// [3] convert HTML-style attributes (`<a attr>`)
@@ -428,7 +428,9 @@ abstract class DOMTemplateNode {
 			// if you’re calling this function from the template-root
 			// we don’t specify a node, otherwise the DOCTYPE / XML prolog
 			// won’t be included
-			get_class ($this) == 'DOMTemplate' ? NULL : $this->DOMNode
+			get_class ($this) == 'DOMTemplate' ? NULL : $this->DOMNode,
+			// expand all self-closed tags if for HTML
+			$this->type == 0 ? LIBXML_NOEMPTYTAG : 0
 		);
 
 		// XML is already used for the internal representation; if outputting
@@ -438,15 +440,12 @@ abstract class DOMTemplateNode {
 
 		// fix and clean DOM's XML into HTML:
 		//----------------------------------------------------------------------
-		// add space to self-closing tags, only beneficial
-		// for prettiness and very old browsers
-		$source = preg_replace ('/<([^<]*[^ ])\/>/', '<$1 />', $source);
-		// fix broken self-closed tags; e.g. `<script ...></script>` will
-		// automatically be converted to `<script ... />` on loading the
-		// document, this breaks in browsers so we have to fix it on output
+		// self-close void HTML elements
+		// <https://html.spec.whatwg.org/#void-elements>
 		$source = preg_replace (
-			'/<(div|iframe|[ou]l|script|textarea|title)([^>]*) ?\/>/i',
-			'<$1$2></$1>', $source
+			'/<(area|base|basefont|br|col|embed|hr|img|input|keygen|link|'.
+			'menuitem|meta|param|source|track|wbr)\b([^>]*)(?<!\/)>(<\/\1>)/is',
+			'<$1$2 />', $source
 		);
 		// convert XML-style attributes (`<a attr="attr">`) to HTML-style
 		// attributes (`<a attr>`), this needs to be repeated until none are
