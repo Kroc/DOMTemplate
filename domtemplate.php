@@ -444,7 +444,7 @@ abstract class DOMTemplateNode {
 		// <https://html.spec.whatwg.org/#void-elements>
 		$source = preg_replace (
 			'/<(area|base|basefont|br|col|embed|hr|img|input|keygen|link|'.
-			'menuitem|meta|param|source|track|wbr)\b([^>]*)(?<!\/)>(<\/\1>)/is',
+			'menuitem|meta|param|source|track|wbr)\b([^>]*)(?<!\/)><\/\1>/is',
 			'<$1$2 />', $source
 		);
 		// convert XML-style attributes (`<a attr="attr">`) to HTML-style
