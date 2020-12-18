@@ -38,7 +38,7 @@ class DOMTemplate extends DOMTemplateNode {
 	const HTML = 0;
 	const XML  = 1;
 
-	// a table of HTML entites to reverse:
+	// a table of HTML entities to reverse:
 	// '&', '<', '>' are removed so we don’t turn user text into working HTML!
 	//
 	// TODO: moving DOMTemplate to a namespace will allow us to use
@@ -133,7 +133,7 @@ abstract class DOMTemplateNode {
 		);
 	}
 
-	// toXML : convert string input to safe XML for inporting into DOM
+	// toXML : convert string input to safe XML for importing into DOM
 	//--------------------------------------------------------------------------
 	// TODO: even though this isn't static, we seem to be able to call it
 	//		 statically!?
@@ -143,7 +143,7 @@ abstract class DOMTemplateNode {
 		// back to real UTF-8 characters (which XML doesn’t mind)
 		$text = $this->html_entity_decode ($text);
 
-		// [2] properly self-close some elments
+		// [2] properly self-close some elements
 		$text = preg_replace (
 			'/<(area|base|basefont|br|col|embed|hr|img|input|keygen|link|'.
 			'menuitem|meta|param|source|track|wbr)\b([^>]*)(?<!\/)>(?!<\/\1>)'.
@@ -316,7 +316,7 @@ abstract class DOMTemplateNode {
 			// if the text is to be inserted as HTML
 			// that will be included into the output
 			case $asHTML:
-				// remove exisiting element's content
+				// remove existing element's content
 				$node->nodeValue = '';
 				// if supplied text is blank end here;
 				// you can't append a blank!
@@ -476,7 +476,7 @@ abstract class DOMTemplateNode {
 	public function repeat ($query) {
 		// NOTE: the provided XPath query could return more than one element!
 		// `DOMTemplateRepeaterArray` therefore acts as a simple wrapper to
-		// propogate changes to all the matched nodes (`DOMTemplateRepeater`)
+		// propagate changes to all the matched nodes (`DOMTemplateRepeater`)
 		return new DOMTemplateRepeaterArray (
 			$this->query ($query), $this->namespaces
 		);
