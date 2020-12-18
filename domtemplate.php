@@ -146,7 +146,7 @@ abstract class DOMTemplateNode {
 		// [2] properly self-close some elments
 		$text = preg_replace (
 			'/<(area|base|basefont|br|col|embed|hr|img|input|keygen|link|'.
-			'menuitem|meta|param|source|track|wbr)\b([^>]*)(?<!\/)>(?!<\/$1>)/is',
+			'menuitem|meta|param|source|track|wbr)\b([^>]*)(?<!\/)>(?!<\/\1>)/is',
 			'<$1$2 />', $text
 		);
 		// [3] convert HTML-style attributes (`<a attr>`)
