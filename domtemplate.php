@@ -302,7 +302,7 @@ abstract class DOMTemplateNode {
 	//--------------------------------------------------------------------------
 	public function set (
 		// an array of `'xpath' => 'text'` to find and set
-		string $queries,
+		array $queries,
 		// text is by-default encoded for safety against HTML injection,
 		// if this parameter is true then the text is added as real HTML
 		bool $asHTML = false
