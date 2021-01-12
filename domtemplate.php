@@ -117,7 +117,6 @@ abstract class DOMTemplateNode {
 		// <https://html.spec.whatwg.org/multipage/named-characters.html>
 		//
 		if (is_null($htmlentities)) {
-			error_log('hi');
 			$htmlentities = array_flip (array_diff (
 				get_html_translation_table(
 					HTML_ENTITIES, ENT_NOQUOTES | ENT_HTML401, 'UTF-8'
