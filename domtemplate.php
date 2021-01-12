@@ -38,14 +38,6 @@ class DOMTemplate extends DOMTemplateNode {
 	const HTML = 0;
 	const XML  = 1;
 
-	// a table of HTML entities to reverse:
-	// '&', '<', '>' are removed so we don’t turn user text into working HTML!
-	//
-	// TODO: moving DOMTemplate to a namespace will allow us to use
-	// 		 a private variable for the namespace, rather than per-instance
-	//		 as generating this table is slow
-	protected $htmlentities = [];
-
 	// new DOMTemplate : instantiation
 	//--------------------------------------------------------------------------
 	public function __construct (
@@ -53,20 +45,6 @@ class DOMTemplate extends DOMTemplateNode {
 		$namespaces=[]	//an array of XML namespaces if your document uses them,
 						//in the format of `'namespace' => 'namespace URI'`
 	) {
-		// construct the HTML entities table:
-		// this function was added in PHP 5.3.4, but the extended HTML5
-		// entities list was not added until later (don't know which version)
-		//
-		// the full list of HTML5 entities, as per the spec, is listed here:
-		// <https://html.spec.whatwg.org/multipage/named-characters.html>
-		//
-		$this->htmlentities = array_flip (array_diff (
-			get_html_translation_table(
-				HTML_ENTITIES, ENT_NOQUOTES | ENT_HTML401, 'UTF-8'
-			),
-			["&amp;", "&lt;", "&gt;"]
-		));
-
 		// detect the content type; HTML or XML,
 		// HTML will need filtering during input and output
 		// -- does this source have an XML prolog?
@@ -123,12 +101,36 @@ abstract class DOMTemplateNode {
 	// html_entity_decode : convert HTML entities back to UTF-8
 	//--------------------------------------------------------------------------
 	public function html_entity_decode ($html) {
+		// a table of HTML entites to reverse:
+		// '&', '<', '>' are removed so we don’t turn user text into working HTML!
+		//
+		// TODO: moving DOMTemplate to a namespace will allow us to use
+		// 		 a private variable for the namespace, rather than per-instance
+		//		 as generating this table is slow
+		static $htmlentities = null;
+
+		// construct the HTML entities table:
+		// this function was added in PHP 5.3.4, but the extended HTML5
+		// entities list was not added until later (don't know which version)
+		//
+		// the full list of HTML5 entities, as per the spec, is listed here:
+		// <https://html.spec.whatwg.org/multipage/named-characters.html>
+		//
+		if (is_null($htmlentities)) {
+			error_log('hi');
+			$htmlentities = array_flip (array_diff (
+				get_html_translation_table(
+					HTML_ENTITIES, ENT_NOQUOTES | ENT_HTML401, 'UTF-8'
+				),
+				["&amp;", "&lt;", "&gt;"]
+			));
+		}
 		// because everything is XML, HTML named entities like "&copy;" will
 		// cause blank output. we need to convert these named entities back
 		// to real UTF-8 characters (which XML doesn’t mind)
 		return str_replace (
-			array_keys ($this->htmlentities),
-			array_values ($this->htmlentities),
+			array_keys ($htmlentities),
+			array_values ($htmlentities),
 			$html
 		);
 	}
