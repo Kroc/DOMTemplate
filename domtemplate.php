@@ -38,7 +38,7 @@ class DOMTemplate extends DOMTemplateNode {
 	const HTML = 0;
 	const XML  = 1;
 
-	// a table of HTML entites to reverse:
+	// a table of HTML entities to reverse:
 	// '&', '<', '>' are removed so we don’t turn user text into working HTML!
 	//
 	// TODO: moving DOMTemplate to a namespace will allow us to use
@@ -133,7 +133,7 @@ abstract class DOMTemplateNode {
 		);
 	}
 
-	// toXML : convert string input to safe XML for inporting into DOM
+	// toXML : convert string input to safe XML for importing into DOM
 	//--------------------------------------------------------------------------
 	// TODO: even though this isn't static, we seem to be able to call it
 	//		 statically!?
@@ -143,11 +143,11 @@ abstract class DOMTemplateNode {
 		// back to real UTF-8 characters (which XML doesn’t mind)
 		$text = $this->html_entity_decode ($text);
 
-		// [2] properly self-close some elments
+		// [2] properly self-close some elements
 		$text = preg_replace (
 			'/<(area|base|basefont|br|col|embed|hr|img|input|keygen|link|'.
-			'menuitem|meta|param|source|track|wbr)([^>]*)(?<!\/)>(?!<\/$1>)/is',
-			'<$1$2 />', $text
+			'menuitem|meta|param|source|track|wbr)\b([^>]*)(?<!\/)>(?!<\/\1>)'.
+			'/is', '<$1$2 />', $text
 		);
 		// [3] convert HTML-style attributes (`<a attr>`)
 		// to XML style attributes (`<a attr="attr">`)
@@ -316,7 +316,7 @@ abstract class DOMTemplateNode {
 			// if the text is to be inserted as HTML
 			// that will be included into the output
 			case $asHTML:
-				// remove exisiting element's content
+				// remove existing element's content
 				$node->nodeValue = '';
 				// if supplied text is blank end here;
 				// you can't append a blank!
@@ -426,27 +426,29 @@ abstract class DOMTemplateNode {
 		// differently depending on desired output format
 		$source = $this->DOMNode->ownerDocument->saveXML (
 			// if you’re calling this function from the template-root
-			// we don’t specify a node, otherwise the DOCTYPE / XML prolog
-			// won’t be included
-			get_class ($this) == 'DOMTemplate' ? NULL : $this->DOMNode
+			// we don’t specify a node, otherwise the DOCTYPE / XML
+			// prolog won’t be included
+			get_class ($this) == 'DOMTemplate' ? NULL : $this->DOMNode,
+			// expand all self-closed tags if for HTML
+			$this->type == 0 ? LIBXML_NOEMPTYTAG : 0
 		);
 
-		// XML is already used for the internal representation; if outputting
-		// XML no filtering is needed (`$this->XML` and `$this::XML` don't
-		// work consistently between PHP versions, so I'm cheeping out)
+		// XML is already used for the internal representation;
+		// if outputting XML no filtering is needed
+		//
+		// note that `$this->XML` and `$this::XML` don't work consistently
+		// between PHP versions and `self::XML` isn't working either,
+		// possibly due to this being either an abstract class definition)
 		if ($this->type == 1) return $source;
 
 		// fix and clean DOM's XML into HTML:
 		//----------------------------------------------------------------------
-		// add space to self-closing tags, only beneficial
-		// for prettiness and very old browsers
-		$source = preg_replace ('/<([^<]*[^ ])\/>/', '<$1 />', $source);
-		// fix broken self-closed tags; e.g. `<script ...></script>` will
-		// automatically be converted to `<script ... />` on loading the
-		// document, this breaks in browsers so we have to fix it on output
+		// self-close void HTML elements
+		// <https://html.spec.whatwg.org/#void-elements>
 		$source = preg_replace (
-			'/<(div|iframe|[ou]l|script|textarea|title)([^>]*) ?\/>/i',
-			'<$1$2></$1>', $source
+			'/<(area|base|basefont|br|col|embed|hr|img|input|keygen|link|'.
+			'menuitem|meta|param|source|track|wbr)\b([^>]*)(?<!\/)><\/\1>/is',
+			'<$1$2 />', $source
 		);
 		// convert XML-style attributes (`<a attr="attr">`) to HTML-style
 		// attributes (`<a attr>`), this needs to be repeated until none are
@@ -477,7 +479,7 @@ abstract class DOMTemplateNode {
 	public function repeat ($query) {
 		// NOTE: the provided XPath query could return more than one element!
 		// `DOMTemplateRepeaterArray` therefore acts as a simple wrapper to
-		// propogate changes to all the matched nodes (`DOMTemplateRepeater`)
+		// propagate changes to all the matched nodes (`DOMTemplateRepeater`)
 		return new DOMTemplateRepeaterArray (
 			$this->query ($query), $this->namespaces
 		);
