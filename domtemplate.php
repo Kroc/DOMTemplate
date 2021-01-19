@@ -426,16 +426,19 @@ abstract class DOMTemplateNode {
 		// differently depending on desired output format
 		$source = $this->DOMNode->ownerDocument->saveXML (
 			// if you’re calling this function from the template-root
-			// we don’t specify a node, otherwise the DOCTYPE / XML prolog
-			// won’t be included
+			// we don’t specify a node, otherwise the DOCTYPE / XML
+			// prolog won’t be included
 			get_class ($this) == 'DOMTemplate' ? NULL : $this->DOMNode,
 			// expand all self-closed tags if for HTML
 			$this->type == 0 ? LIBXML_NOEMPTYTAG : 0
 		);
 
-		// XML is already used for the internal representation; if outputting
-		// XML no filtering is needed (`$this->XML` and `$this::XML` don't
-		// work consistently between PHP versions, so I'm cheeping out)
+		// XML is already used for the internal representation;
+		// if outputting XML no filtering is needed
+		//
+		// note that `$this->XML` and `$this::XML` don't work consistently
+		// between PHP versions and `self::XML` isn't working either,
+		// possibly due to this being either an abstract class definition)
 		if ($this->type == 1) return $source;
 
 		// fix and clean DOM's XML into HTML:
