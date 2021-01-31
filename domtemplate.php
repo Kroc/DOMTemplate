@@ -11,83 +11,88 @@
     (string)
             to output the HTML / XML, cast the DOMTemplate object to a string,
             e.g. `echo $template;`, or `$output = (string) $template;`
-    query (query)
+    query( query )
             make an XPath query
-    set (queries, [asHTML])
-            change HTML by specifying an array of ('XPath' => 'value')
-    setValue (query, value, [asHTML])
+    set( queries, [asHTML] )
+            change HTML by specifying an array of ['XPath' => 'value']
+    setValue( query, value, [asHTML] )
             change a single HTML value with an XPath query
-    addClass (query, new_class)
+    addClass( query, new_class )
             add a class to an HTML element
-    append (query, content)
+    append( query, content )
             append content to the end of the *inside* an element
-    remove (query)
+    remove( query )
             remove one or more HTML elements, attributes or classes
-    repeat (query)
+    repeat( query )
             return one (or more) elements as sub-templates:
-        next ()
+        next()
             append the sub-template to the list and reset its content
 */
 
 namespace kroc;
 
+const TYPE_HTML = 0;
+const TYPE_XML  = 1;
+
 // class DOMTemplate : the overall template controller
 //==============================================================================
-class DOMTemplate extends DOMTemplateNode {
+class DOMTemplate
+    extends DOMTemplateNode
+{
     // internal reference to the PHP `DOMDocument` for the template's XML
     private $DOMDocument;
 
     // what type of data are we processing?
-    protected $type = self::HTML;
-    public const HTML = 0;
-    public const XML  = 1;
+    protected $type = TYPE_HTML;
 
     // new DOMTemplate : instantiation
     //--------------------------------------------------------------------------
     public function __construct (
         // a string of the HTML or XML to form the template
-        string $source,
+        string  $source,
         // an array of XML namespaces if your document uses them,
         // in the format of `'namespace' => 'namespace URI'`
-        array  $namespaces=[]
+        array   $namespaces =[]
     ) {
         // detect the content type; HTML or XML,
         // HTML will need filtering during input and output
         // -- does this source have an XML prolog?
-        $this->type = substr_compare ($source, '<?xml', 0, 4, true) === 0
-                    ? self::XML : self::HTML
-        ;
+        $this->type = (
+            substr_compare( $source, '<?xml', 0, 4, true ) === 0
+        )   ? TYPE_XML : TYPE_HTML;
         // load the template file to work with,
         // it _must_ have only one root (wrapping) element; e.g. `<html>`
-        $this->DOMDocument = new \DOMDocument ();
-        if (!$this->DOMDocument->loadXML (
+        $this->DOMDocument = new \DOMDocument();
+
+        if (!$this->DOMDocument->loadXML(
             // if the source is HTML add an XML prolog
             // to avoid mangling unicode characters, see
             // <php.net/manual/en/domdocument.loadxml.php#94291>,
             // also convert it to XML for PHP DOM use
-            $this->type == self::HTML
-            ? "<?xml version=\"1.0\" encoding=\"utf-8\"?>".self::toXML ($source)
-            : $source,
+            $this->type == TYPE_HTML
+            ?   "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+                .self::toXML( $source )
+            :   $source,
             // <https://www.php.net/manual/en/libxml.constants.php>
             LIBXML_COMPACT |	// libxml >= 2.6.21
             LIBXML_NONET		// do not connect to external resources
-        )) trigger_error (
+        )) trigger_error(
             "Source is invalid XML", E_USER_ERROR
         );
         // set the root node for all XPath searching
         // (handled all internally by `DOMTemplateNode`)
-        parent::__construct ($this->DOMDocument->documentElement, $namespaces);
+        parent::__construct( $this->DOMDocument->documentElement, $namespaces );
     }
 
     // output the document (cast the object to a string, i.e. `echo $template;`)
     //--------------------------------------------------------------------------
     public function __toString (): string {
         // if the input was HTML, remove the XML prolog on output
-        return $this->type == self::HTML
+        return $this->type == TYPE_HTML
         ?	// we defer to DOMTemplateNode which returns the HTML for any node,
             // the top-level template only needs to consider the prolog
-            preg_replace ('/^<\?xml[^<]*>\n/', '', parent::__toString ())
-        :	parent::__toString ();
+            preg_replace( '/^<\?xml[^<]*>\n/', '', parent::__toString() )
+        :	parent::__toString();
     }
 }
 
@@ -97,7 +102,8 @@ class DOMTemplate extends DOMTemplateNode {
 // `DOMTemplateRepeater`. for a good description of 'abstract', see
 // <php.net/manual/en/language.oop5.abstract.php#95404>
 //
-abstract class DOMTemplateNode {
+abstract class DOMTemplateNode
+{
     protected $DOMNode;		// reference to the `DOMNode` being operated upon
     private   $DOMXPath;	// an internal XPath object,
                             // so you don't have to manage one externally
@@ -106,19 +112,22 @@ abstract class DOMTemplateNode {
 
     // create_fragment : given plain-text, turn it into a small DOM tree
     //--------------------------------------------------------------------------
-    private function create_fragment (string $text) : \DOMDocumentFragment {
-        $frag = $this->DOMNode->ownerDocument->createDocumentFragment ();
-        $frag->appendXML (
+    private function create_fragment (
+        string  $text
+    ) : \DOMDocumentFragment {
+        $frag = $this->DOMNode->ownerDocument->createDocumentFragment();
+        $frag->appendXML(
             // if the source document is HTML, filter it
-            $this->type == DOMTemplate::HTML
-            ? self::toXML ($text) : $text
+            $this->type == TYPE_HTML ? self::toXML( $text ) : $text
         );
         return $frag;
     }
 
     // html_entity_decode : convert HTML entities back to UTF-8
     //--------------------------------------------------------------------------
-    public function html_entity_decode (string $html): string {
+    public function html_entity_decode (
+        string  $html
+    ) : string {
         // a table of HTML entites to reverse:
         // '&', '<', '>' are removed so we don’t turn user text into working HTML!
         //
@@ -144,9 +153,9 @@ abstract class DOMTemplateNode {
         // because everything is XML, HTML named entities like "&copy;" will
         // cause blank output. we need to convert these named entities back
         // to real UTF-8 characters (which XML doesn’t mind)
-        return str_replace (
-            array_keys ($htmlentities),
-            array_values ($htmlentities),
+        return str_replace(
+            array_keys( $htmlentities ),
+            array_values( $htmlentities ),
             $html
         );
     }
@@ -155,29 +164,31 @@ abstract class DOMTemplateNode {
     //--------------------------------------------------------------------------
     // TODO: even though this isn't static, we seem to be able to call it
     //		 statically!?
-    public function toXML (string $text): string {
+    public function toXML (
+        string  $text
+    ) : string {
         // [1] because everything is XML, HTML named entities like "&copy;"
         // will cause blank output. we need to convert these named entities
         // back to real UTF-8 characters (which XML doesn’t mind)
-        $text = $this->html_entity_decode ($text);
+        $text = $this->html_entity_decode( $text );
 
         // [2] properly self-close some elements
-        $text = preg_replace (
+        $text = preg_replace(
             '/<(area|base|basefont|br|col|embed|hr|img|input|keygen|link|'.
             'menuitem|meta|param|source|track|wbr)\b([^>]*)(?<!\/)>(?!<\/\1>)'.
             '/is', '<$1$2 />', $text
         );
         // [3] convert HTML-style attributes (`<a attr>`)
         // to XML style attributes (`<a attr="attr">`)
-        while (preg_match (
+        while (preg_match(
             '/(?>(<(?!!)[a-z-]+(?:\s|[a-z-]+="[^"]*")+))([a-z-]+)(?=[>\s])/is',
             $text, $m, PREG_OFFSET_CAPTURE
-        )) 	$text = substr_replace (
+        )) 	$text = substr_replace(
             $text, $m[1][0].$m[2][0].'="'.$m[2][0].'"', $m[0][1],
             strlen ($m[0][0])
         );
         // [4] properly escape JavaScript with CDATA
-        $text = preg_replace (
+        $text = preg_replace(
             '/(<script[^>]*>)(.*?)(<\/script>)/is',
             "$1<![CDATA[$2]]>$3", $text
         );
@@ -207,19 +218,19 @@ abstract class DOMTemplateNode {
     //
     public static function shorthand2xpath (
         // a string to convert
-        string $query,
+        string  $query,
         // by default, the converted XPath uses a relative prefix
         // -- "//" -- to work around a bug in XPath matching.
         // see <php.net/manual/en/domxpath.query.php#99760> for details
-        bool $use_relative = true
+        bool    $use_relative = true
     ) :	string {
         // return from cache where possible
         // (this doubles the speed of repeat loops)
         static $cache = [];
-        if (isset ($cache[$query])) return $cache[$query];
+        if (isset( $cache[$query] )) return $cache[$query];
 
         // match the allowed format of shorthand
-        return $cache[$query] = preg_match (
+        return $cache[$query] = preg_match(
             '/^(?!\/)([a-z0-9:-]+(\[\d+\])?)?(?:([\.#])([a-z0-9:_-]+))?'.
             '(@[a-z-]+(="[^"]+")?)?(?:\/(.*))?$/i',
         $query, $m)
@@ -238,7 +249,7 @@ abstract class DOMTemplateNode {
                 ? "[${m[5]}]"	//- an attribute test
                 : "/${m[5]}"	//- or select the attribute
             ) : '').
-            (@$m[7] ? '/'.self::shorthand2xpath ($m[7], false) : '')
+            (@$m[7] ? '/'.self::shorthand2xpath( $m[7], false ) : '')
         : $query;
     }
 
@@ -251,19 +262,19 @@ abstract class DOMTemplateNode {
     //
     public function __construct (
         \DOMNode    $DOMNode,
-        array 	    $namespaces=[]
+        array 	    $namespaces =[]
     ) {
         // use a DOMNode as a base point for all the XPath queries
         // and whatnot (in DOMTemplate this will be the whole template,
         // in DOMTemplateRepeater, it will be the chosen element)
         $this->DOMNode  = $DOMNode;
-        $this->DOMXPath = new \DOMXPath ($DOMNode->ownerDocument);
+        $this->DOMXPath = new \DOMXPath( $DOMNode->ownerDocument );
         // the painful bit: if you have an XMLNS in your template
         // then XPath won’t work unless you:
         // a. register a default namespace, and
         // b. prefix element names in your XPath queries with this namespace
-        if (!empty ($namespaces)) foreach ($namespaces as $NS=>$URI)
-            $this->DOMXPath->registerNamespace ($NS, $URI)
+        if (!empty( $namespaces )) foreach ($namespaces as $NS=>$URI)
+            $this->DOMXPath->registerNamespace( $NS, $URI )
         ;
         $this->namespaces = $namespaces;
     }
@@ -281,19 +292,19 @@ abstract class DOMTemplateNode {
     //
     public function query (
         // an XPath/shorthand (see `shorthand2xpath`) to search for nodes
-        string $query
+        string  $query
     ) : \DOMNodeList {
         // convert each query to real XPath: (multiple targets
         // are available by comma separating queries)
-        $xpath = implode ('|', array_map (
-            ['self', 'shorthand2xpath'], explode (', ', $query)
+        $xpath = implode( '|', array_map(
+            ['self', 'shorthand2xpath'], explode( ', ', $query )
         ));
 
         // run the real XPath query and return the DOMNodeList result
-        If ($result = @$this->DOMXPath->query ($xpath, $this->DOMNode)) {
+        If ($result = @$this->DOMXPath->query( $xpath, $this->DOMNode )) {
             return $result;
         } else {
-            throw new \Exception ("Invalid XPath Expression: $xpath");
+            throw new \Exception( "Invalid XPath Expression: $xpath" );
         }
     }
 
@@ -301,13 +312,13 @@ abstract class DOMTemplateNode {
     //--------------------------------------------------------------------------
     public function set (
         // an array of `'xpath' => 'text'` to find and set
-        array $queries,
+        array   $queries,
         // text is by-default encoded for safety against HTML injection,
         // if this parameter is true then the text is added as real HTML
-        bool $asHTML = false
+        bool    $asHTML =false
     ) {
         foreach ($queries as $query => $value)
-            $this->setValue ($query, $value, $asHTML)
+            $this->setValue( $query, $value, $asHTML )
         ;
         return $this;
     }
@@ -316,25 +327,25 @@ abstract class DOMTemplateNode {
     //--------------------------------------------------------------------------
     public function setValue (
         // an XPath/shorthand (see `shorthand2xpath`) to search for nodes
-        string $query,
+        string  $query,
         // what text to replace the node's contents with
-        string $value,
+        string  $value,
         // if the text should be safety encoded or inserted as HTML
-        bool $asHTML = false
+        bool    $asHTML =false
     ) {
-        foreach ($this->query ($query) as $node) switch (true) {
+        foreach ($this->query( $query ) as $node) switch (true) {
 
             // if the selected node is a "class" attribute,
             case $node->nodeType == XML_ATTRIBUTE_NODE
               && $node->nodeName == 'class':
                 // add the className to it
-                $this->setClassNode ($node, $value);
+                $this->setClassNode( $node, $value );
                 break;
 
             // if the selected node is any other element attribute,
             case $node->nodeType == XML_ATTRIBUTE_NODE:
                 // set its value
-                $node->nodeValue = htmlspecialchars ($value, ENT_QUOTES);
+                $node->nodeValue = htmlspecialchars( $value, ENT_QUOTES );
                 break;
 
             // if the text is to be inserted as HTML
@@ -347,15 +358,15 @@ abstract class DOMTemplateNode {
                 if (!$value) break;
 
                 // attach the HTML/XML fragment to the node
-                $node->appendChild (
-                    $this->create_fragment($value)
+                $node->appendChild(
+                    $this->create_fragment( $value )
                 );
                 break;
 
             // otherwise,
             default:
                 // encode the text to display as-is
-                $node->nodeValue = htmlspecialchars ($value, ENT_NOQUOTES);
+                $node->nodeValue = htmlspecialchars( $value, ENT_NOQUOTES );
         }
         return $this;
     }
@@ -364,20 +375,20 @@ abstract class DOMTemplateNode {
     // appending it to existing classes if they exist
     //--------------------------------------------------------------------------
     public function addClass (
-        string $query,
-        string $new_class
+        string  $query,
+        string  $new_class
     ) {
         // first determine if there is a 'class' attribute already?
-        foreach ($this->query ($query) as $node) if (
-            $node->hasAttributes () && $class = $node->getAttribute ('class')
+        foreach ($this->query( $query ) as $node) if (
+            $node->hasAttributes() && $class = $node->getAttribute( 'class' )
         ) {
             // if the new class is not already in the list, add it in
-            $this->setClassNode (
-                $node->attributes->getNamedItem ('class'), $new_class
+            $this->setClassNode(
+                $node->attributes->getNamedItem( 'class' ), $new_class
             );
         } else {
             // no class attribute to begin with, add it
-            $node->setAttribute ('class', $new_class);
+            $node->setAttribute( 'class', $new_class );
         }
         return $this;
     }
@@ -389,22 +400,22 @@ abstract class DOMTemplateNode {
         string	    $class
     ) : void {
         // check if the class node already has the className (don't add twice)
-        if (!in_array ($class, explode (' ', $DOMNode->nodeValue)))
+        if (!in_array( $class, explode( ' ', $DOMNode->nodeValue )))
             @$DOMNode->nodeValue = $DOMNode->nodeValue." $class"
         ;
     }
 
     // append: append content to the end of the *inside* an element
     //--------------------------------------------------------------------------
-    public function append(
-        string $query,			// node query to select element(s)
-        string $content 		// content to append
+    public function append (
+        string  $query,			// node query to select element(s)
+        string  $content        // content to append
     ) {
         // conver the plain-text to an 
         $frag = $this->create_fragment( $content );
         // execute query, loop returned node(s) and
         // attach the HTML/XML fragment to the node
-        foreach ($this->query ($query) as $node) $node->appendChild ($frag);
+        foreach ($this->query( $query ) as $node) $node->appendChild( $frag );
         // chain...
         return $this;
     }
@@ -432,31 +443,31 @@ abstract class DOMTemplateNode {
         $query		// TODO: use union type or extra methods for string|array
     ) {
         // if a string is provided, cast it into an array for assumption below
-        if (is_string ($query)) $query = [$query => true];
+        if (is_string( $query )) $query = [$query => true];
         // loop the array, test the logic, and select the node(s)...
         foreach ($query as $xpath => $logic) if ($logic) foreach (
-            $this->query ($xpath) as $node
+            $this->query( $xpath ) as $node
         ) if (
             // is this an HTML element attribute?
             $node->nodeType == XML_ATTRIBUTE_NODE
         ) {
             // is this an HTML class attribute, and has a className
             // been given to selectively remove?
-            if ($node->nodeName == 'class' && is_string ($logic)) {
+            if ($node->nodeName == 'class' && is_string( $logic )) {
                 // reconstruct the class attribute value,
                 // sans the chosen className
-                $node->nodeValue = implode (' ',
-                    array_diff (explode (' ', $node->nodeValue), [$logic])
+                $node->nodeValue = implode( ' ',
+                    array_diff( explode( ' ', $node->nodeValue ), [$logic] )
                 );
                 // if there are classNames remaining, skip
                 // removing the whole class attribute
                 if ($node->nodeValue) continue;
             }
             // remove the whole attribute:
-            $node->parentNode->removeAttributeNode ($node);
+            $node->parentNode->removeAttributeNode( $node );
         } else {
             // remove an element node, rather than an attribute node
-            $node->parentNode->removeChild ($node);
+            $node->parentNode->removeChild( $node );
         } return $this;
     }
 
@@ -465,28 +476,24 @@ abstract class DOMTemplateNode {
     public function __toString (): string {
         // get the document's code, we'll process it
         // differently depending on desired output format
-        $source = $this->DOMNode->ownerDocument->saveXML (
+        $source = $this->DOMNode->ownerDocument->saveXML(
             // if you’re calling this function from the template-root
             // we don’t specify a node, otherwise the DOCTYPE / XML
             // prolog won’t be included
-            get_class ($this) == 'DOMTemplate' ? NULL : $this->DOMNode,
+            get_class( $this ) == 'DOMTemplate' ? NULL : $this->DOMNode,
             // expand all self-closed tags if for HTML
-            $this->type == 0 ? LIBXML_NOEMPTYTAG : 0
+            $this->type == TYPE_HTML ? LIBXML_NOEMPTYTAG : 0
         );
 
         // XML is already used for the internal representation;
         // if outputting XML no filtering is needed
-        //
-        // note that `$this->XML` and `$this::XML` don't work consistently
-        // between PHP versions and `self::XML` isn't working either,
-        // possibly due to this being either an abstract class definition)
-        if ($this->type == 1) return $source;
+        if ($this->type == TYPE_XML) return $source;
 
         // fix and clean DOM's XML into HTML:
         //----------------------------------------------------------------------
         // self-close void HTML elements
         // <https://html.spec.whatwg.org/#void-elements>
-        $source = preg_replace (
+        $source = preg_replace(
             '/<(area|base|basefont|br|col|embed|hr|img|input|keygen|link|'.
             'menuitem|meta|param|source|track|wbr)\b([^>]*)(?<!\/)><\/\1>/is',
             '<$1$2 />', $source
@@ -495,14 +502,14 @@ abstract class DOMTemplateNode {
         // attributes (`<a attr>`), this needs to be repeated until none are
         // left as we must anchor each to the opening bracket of the element,
         // otherwise content text might be hit too
-        while (preg_match (
+        while (preg_match(
             '/(<(?!!)[^>]+\s)([a-z-]+)=([\'"]?)\2\3/im',
             $source, $m, PREG_OFFSET_CAPTURE
-        )) 	$source = substr_replace (
-            $source, $m[1][0].$m[2][0], $m[0][1], strlen ($m[0][0])
+        )) 	$source = substr_replace(
+            $source, $m[1][0].$m[2][0], $m[0][1], strlen( $m[0][0] )
         );
         // strip out CDATA sections
-        $source = preg_replace ('/<!\[CDATA\[(.*?)\]\]>/s', '$1', $source);
+        $source = preg_replace( '/<!\[CDATA\[(.*?)\]\]>/s', '$1', $source );
 
         return $source;
     }
@@ -518,14 +525,13 @@ abstract class DOMTemplateNode {
         foreach ($data as $value) $item->setValue ('.', $value)->next ();
     */
     public function repeat (
-        string $query
-    ) : DOMTemplateRepeaterArray
-    {
+        string  $query
+    ) : DOMTemplateRepeaterArray {
         // NOTE: the provided XPath query could return more than one element!
         // `DOMTemplateRepeaterArray` therefore acts as a simple wrapper to
         // propagate changes to all the matched nodes (`DOMTemplateRepeater`)
-        return new DOMTemplateRepeaterArray (
-            $this->query ($query), $this->namespaces
+        return new DOMTemplateRepeaterArray(
+            $this->query( $query ), $this->namespaces
         );
     }
 }
@@ -541,20 +547,20 @@ class DOMTemplateRepeaterArray {
 
     public function __construct (
         \DOMNodeList    $DOMNodeList,
-        array		    $namespaces=[]
+        array		    $namespaces =[]
     ) {
         // convert the XPath query result into extended `DOMTemplateNode`s
         // (`DOMTemplateRepeater`) so that you can modify the HTML with
         // the same usual DOMTemplate API
         foreach ($DOMNodeList as $DOMNode)
-            $this->nodes[] = new DOMTemplateRepeater ($DOMNode, $namespaces)
+            $this->nodes[] = new DOMTemplateRepeater( $DOMNode, $namespaces )
         ;
     }
 
     public function next () {
         // cannot use `foreach` here because you shouldn't
         // modify the nodes whilst iterating them
-        for ($i=0; $i<count ($this->nodes); $i++) $this->nodes[$i]->next ();
+        for ($i=0; $i<count( $this->nodes ); $i++) $this->nodes[$i]->next();
         return $this;
     }
 
@@ -563,7 +569,7 @@ class DOMTemplateRepeaterArray {
         string  $queries,
         bool	$asHTML = false
     ) {
-        foreach ($this->nodes as $node) $node->set ($queries, $asHTML);
+        foreach ($this->nodes as $node) $node->set( $queries, $asHTML );
         return $this;
     }
 
@@ -574,25 +580,25 @@ class DOMTemplateRepeaterArray {
         bool	$asHTML = false
     ) {
         foreach ($this->nodes as $node)
-            $node->setValue ($query, $value, $asHTML)
+            $node->setValue( $query, $value, $asHTML )
         ;
         return $this;
     }
 
     // refer to `DOMTemplateNode->addClass`
     public function addClass (
-        string $query,
-        string $new_class
+        string  $query,
+        string  $new_class
     ) {
-        foreach ($this->nodes as $node) $node->addClass ($query, $new_class);
+        foreach ($this->nodes as $node) $node->addClass( $query, $new_class );
         return $this;
     }
 
     // refer to `DOMTemplateNode->remove`
     public function remove (
-        string $query
+        string  $query
     ) {
-        foreach ($this->nodes as $node) $node->remove ($query);
+        foreach ($this->nodes as $node) $node->remove( $query );
         return $this;
     }
 }
@@ -614,9 +620,9 @@ class DOMTemplateRepeater extends DOMTemplateNode {
         $this->refNode  = $DOMNode;
         // take a copy of the original node that we will use
         // as a starting point each time we iterate
-        $this->template = $DOMNode->cloneNode (true);
+        $this->template = $DOMNode->cloneNode( true );
         // initialise the template with the current, original node
-        parent::__construct ($DOMNode, $namespaces);
+        parent::__construct( $DOMNode, $namespaces );
     }
 
     public function next (): this {
@@ -624,16 +630,16 @@ class DOMTemplateRepeater extends DOMTemplateNode {
         // use it as the reference node for the next item and so on
         $this->refNode =
             ($this->refNode->parentNode->lastChild === $this->DOMNode)
-            ? $this->refNode->parentNode->appendChild ($this->DOMNode)
+            ? $this->refNode->parentNode->appendChild( $this->DOMNode )
             // if there's some kind of HTML after the reference node, we can
             // use that to insert our item inbetween. this means that the list
             // you are templating doesn't have to be wrapped in an element!
-            : $this->refNode->parentNode->insertBefore (
+            : $this->refNode->parentNode->insertBefore(
                 $this->DOMNode, $this->refNode->nextSibling
             )
         ;
         // reset the template
-        $this->DOMNode = $this->template->cloneNode (true);
+        $this->DOMNode = $this->template->cloneNode( true );
         return $this;
     }
 }
