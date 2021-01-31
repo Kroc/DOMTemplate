@@ -1,6 +1,6 @@
-<?php
+<?php declare( strict_types=1 );
 
-// DOM Templating classes v19 © copyright (cc-by) Kroc Camen 2012-2021
+// DOM Templating classes v20 © copyright (cc-by) Kroc Camen 2012-2021
 // you may do whatever you want with this code as long as you give credit
 // documentation at <camendesign.com/dom_templating>
 
@@ -29,8 +29,7 @@
             append the sub-template to the list and reset its content
 */
 
-// PHP 7+ required:
-declare(strict_types=1);
+namespace kroc;
 
 // class DOMTemplate : the overall template controller
 //==============================================================================
@@ -60,7 +59,7 @@ class DOMTemplate extends DOMTemplateNode {
         ;
         // load the template file to work with,
         // it _must_ have only one root (wrapping) element; e.g. `<html>`
-        $this->DOMDocument = new DOMDocument ();
+        $this->DOMDocument = new \DOMDocument ();
         if (!$this->DOMDocument->loadXML (
             // if the source is HTML add an XML prolog
             // to avoid mangling unicode characters, see
@@ -107,7 +106,7 @@ abstract class DOMTemplateNode {
 
     // create_fragment : given plain-text, turn it into a small DOM tree
     //--------------------------------------------------------------------------
-    private function create_fragment (string $text) : DOMDocumentFragment {
+    private function create_fragment (string $text) : \DOMDocumentFragment {
         $frag = $this->DOMNode->ownerDocument->createDocumentFragment ();
         $frag->appendXML (
             // if the source document is HTML, filter it
@@ -251,14 +250,14 @@ abstract class DOMTemplateNode {
     // DOMTemplate
     //
     public function __construct (
-        DOMNode $DOMNode,
-        array 	$namespaces=[]
+        \DOMNode    $DOMNode,
+        array 	    $namespaces=[]
     ) {
         // use a DOMNode as a base point for all the XPath queries
         // and whatnot (in DOMTemplate this will be the whole template,
         // in DOMTemplateRepeater, it will be the chosen element)
         $this->DOMNode  = $DOMNode;
-        $this->DOMXPath = new DOMXPath ($DOMNode->ownerDocument);
+        $this->DOMXPath = new \DOMXPath ($DOMNode->ownerDocument);
         // the painful bit: if you have an XMLNS in your template
         // then XPath won’t work unless you:
         // a. register a default namespace, and
@@ -283,7 +282,7 @@ abstract class DOMTemplateNode {
     public function query (
         // an XPath/shorthand (see `shorthand2xpath`) to search for nodes
         string $query
-    ) : DOMNodeList {
+    ) : \DOMNodeList {
         // convert each query to real XPath: (multiple targets
         // are available by comma separating queries)
         $xpath = implode ('|', array_map (
@@ -294,7 +293,7 @@ abstract class DOMTemplateNode {
         If ($result = @$this->DOMXPath->query ($xpath, $this->DOMNode)) {
             return $result;
         } else {
-            throw new Exception ("Invalid XPath Expression: $xpath");
+            throw new \Exception ("Invalid XPath Expression: $xpath");
         }
     }
 
@@ -386,8 +385,8 @@ abstract class DOMTemplateNode {
     // add a className to an existing class attribute
     // (this is shared between `setValue` & `addClass`)
     private function setClassNode (
-        DOMNode $DOMNode,
-        string	$class
+        \DOMNode    $DOMNode,
+        string	    $class
     ) : void {
         // check if the class node already has the className (don't add twice)
         if (!in_array ($class, explode (' ', $DOMNode->nodeValue)))
@@ -541,8 +540,8 @@ class DOMTemplateRepeaterArray {
     private $nodes;
 
     public function __construct (
-        DOMNodeList $DOMNodeList,
-        array		$namespaces=[]
+        \DOMNodeList    $DOMNodeList,
+        array		    $namespaces=[]
     ) {
         // convert the XPath query result into extended `DOMTemplateNode`s
         // (`DOMTemplateRepeater`) so that you can modify the HTML with
@@ -607,8 +606,8 @@ class DOMTemplateRepeater extends DOMTemplateNode {
     protected $type;
 
     public function __construct (
-        DOMNode	$DOMNode,
-        array	$namespaces=[]
+        \DOMNode	$DOMNode,
+        array	    $namespaces=[]
     ) {
         // we insert the templated item after the reference node,
         // which will always be the last item that was templated
