@@ -625,7 +625,7 @@ class DOMTemplateRepeater extends DOMTemplateNode {
         parent::__construct( $DOMNode, $namespaces );
     }
 
-    public function next (): this {
+    public function next (): self {
         // when we insert the newly templated item,
         // use it as the reference node for the next item and so on
         $this->refNode =
