@@ -34,67 +34,6 @@ namespace kroc;
 const TYPE_HTML = 0;
 const TYPE_XML  = 1;
 
-// class DOMTemplate : the overall template controller
-//==============================================================================
-class DOMTemplate
-    extends DOMTemplateNode
-{
-    // internal reference to the PHP `DOMDocument` for the template's XML
-    private $DOMDocument;
-
-    // what type of data are we processing?
-    protected $type = TYPE_HTML;
-
-    // new DOMTemplate : instantiation
-    //--------------------------------------------------------------------------
-    public function __construct (
-        // a string of the HTML or XML to form the template
-        string  $source,
-        // an array of XML namespaces if your document uses them,
-        // in the format of `'namespace' => 'namespace URI'`
-        array   $namespaces =[]
-    ) {
-        // detect the content type; HTML or XML,
-        // HTML will need filtering during input and output
-        // -- does this source have an XML prolog?
-        $this->type = (
-            substr_compare( $source, '<?xml', 0, 4, true ) === 0
-        )   ? TYPE_XML : TYPE_HTML;
-        // load the template file to work with,
-        // it _must_ have only one root (wrapping) element; e.g. `<html>`
-        $this->DOMDocument = new \DOMDocument();
-
-        if (!$this->DOMDocument->loadXML(
-            // if the source is HTML add an XML prolog
-            // to avoid mangling unicode characters, see
-            // <php.net/manual/en/domdocument.loadxml.php#94291>,
-            // also convert it to XML for PHP DOM use
-            $this->type == TYPE_HTML
-            ?   "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-                .self::toXML( $source )
-            :   $source,
-            // <https://www.php.net/manual/en/libxml.constants.php>
-            LIBXML_COMPACT |	// libxml >= 2.6.21
-            LIBXML_NONET		// do not connect to external resources
-        )) trigger_error(
-            "Source is invalid XML", E_USER_ERROR
-        );
-        // set the root node for all XPath searching
-        // (handled all internally by `DOMTemplateNode`)
-        parent::__construct( $this->DOMDocument->documentElement, $namespaces );
-    }
-
-    // output the document (cast the object to a string, i.e. `echo $template;`)
-    //--------------------------------------------------------------------------
-    public function __toString (): string {
-        // if the input was HTML, remove the XML prolog on output
-        return $this->type == TYPE_HTML
-        ?	// we defer to DOMTemplateNode which returns the HTML for any node,
-            // the top-level template only needs to consider the prolog
-            preg_replace( '/^<\?xml[^<]*>\n/', '', parent::__toString() )
-        :	parent::__toString();
-    }
-}
 
 // class DOMTemplateNode
 //==============================================================================
@@ -536,13 +475,78 @@ abstract class DOMTemplateNode
     }
 }
 
+
+// class DOMTemplate : the overall template controller
+//==============================================================================
+class DOMTemplate
+    extends DOMTemplateNode
+{
+    // internal reference to the PHP `DOMDocument` for the template's XML
+    private $DOMDocument;
+
+    // what type of data are we processing?
+    protected $type = TYPE_HTML;
+
+    // new DOMTemplate : instantiation
+    //--------------------------------------------------------------------------
+    public function __construct (
+        // a string of the HTML or XML to form the template
+        string  $source,
+        // an array of XML namespaces if your document uses them,
+        // in the format of `'namespace' => 'namespace URI'`
+        array   $namespaces =[]
+    ) {
+        // detect the content type; HTML or XML,
+        // HTML will need filtering during input and output
+        // -- does this source have an XML prolog?
+        $this->type = (
+            substr_compare( $source, '<?xml', 0, 4, true ) === 0
+        )   ? TYPE_XML : TYPE_HTML;
+        // load the template file to work with,
+        // it _must_ have only one root (wrapping) element; e.g. `<html>`
+        $this->DOMDocument = new \DOMDocument();
+
+        if (!$this->DOMDocument->loadXML(
+            // if the source is HTML add an XML prolog
+            // to avoid mangling unicode characters, see
+            // <php.net/manual/en/domdocument.loadxml.php#94291>,
+            // also convert it to XML for PHP DOM use
+            $this->type == TYPE_HTML
+            ?   "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+                .self::toXML( $source )
+            :   $source,
+            // <https://www.php.net/manual/en/libxml.constants.php>
+            LIBXML_COMPACT |	// libxml >= 2.6.21
+            LIBXML_NONET		// do not connect to external resources
+        )) trigger_error(
+            "Source is invalid XML", E_USER_ERROR
+        );
+        // set the root node for all XPath searching
+        // (handled all internally by `DOMTemplateNode`)
+        parent::__construct( $this->DOMDocument->documentElement, $namespaces );
+    }
+
+    // output the document (cast the object to a string, i.e. `echo $template;`)
+    //--------------------------------------------------------------------------
+    public function __toString (): string {
+        // if the input was HTML, remove the XML prolog on output
+        return $this->type == TYPE_HTML
+        ?	// we defer to DOMTemplateNode which returns the HTML for any node,
+            // the top-level template only needs to consider the prolog
+            preg_replace( '/^<\?xml[^<]*>\n/', '', parent::__toString() )
+        :	parent::__toString();
+    }
+}
+
+
 // class DOMTemplateRepeaterArray : allow repetition over multiple nodes
 //==============================================================================
 // this is just a wrapper to handle that `repeat` might be executed on more
 // than one element simultaneously; for example, if you are producing a list
 // that occurs more than once on a page (e.g. page number links in a forum)
 //
-class DOMTemplateRepeaterArray {
+class DOMTemplateRepeaterArray
+{
     private $nodes;
 
     public function __construct (
@@ -605,7 +609,9 @@ class DOMTemplateRepeaterArray {
 
 // class DOMTemplateRepeater : the business-end of `DOMTemplateNode->repeat`!
 //==============================================================================
-class DOMTemplateRepeater extends DOMTemplateNode {
+class DOMTemplateRepeater
+    extends DOMTemplateNode
+{
     private $refNode;	// the templated node will be added after this node
     private $template;	// a copy of the original node to work from each time
 
