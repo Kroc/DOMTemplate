@@ -1,0 +1,22 @@
+{
+    "name": "kroc/domtemplate",
+    "description": "A templating engine that manipulates static HTML using DOM & XPath so as to separate template and logic",
+    "type": "library",
+    "keywords": ["template","dom"],
+    "license": "CC-BY-3.0",
+    "authors": [
+        {
+            "name": "Kroc Camen",
+            "email": "kroc@camendesign.com",
+            "homepage": "http://camendesign.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+    },
+    "autoload": {
+        "psr-4": {
+            "": "./"
+        }
+    }
+}
